@@ -3,6 +3,10 @@ library(tidyverse)
 library(biscale)
 library(cowplot)
 
+# Inspiration:
+# https://twitter.com/jhilden/status/1513882835937026073
+# https://slu-opengis.github.io/biscale/articles/biscale.html
+
 map_data <- readRDS("map_data.RDS")
 
 variables1 <- sort(c("share_of_women", "share_of_men", unique(map_data$information)))
@@ -38,7 +42,7 @@ make_bivariate_map <- function(data, x, y, style = "quantile", dim = 3, pal = "D
 ui <- fluidPage(
   
   tags$h2(
-    HTML("Compare by region")
+    HTML("Compare means by region")
   ),
   
   tags$head(
@@ -70,9 +74,9 @@ ui <- fluidPage(
                 selected = "degree_of_urbanisation_percent"),
     HTML("<p></p>
           <span style='color:black;font-size:12px'
-          <p><a href='https://github.com/tts/lakes'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
+          <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
           <p></p>
-          <p>Data: <a href='https://hri.fi/data/en_GB/dataset/seutukartta'>Helsinki Region Map</a>.</p>
+          <p>Finnish Geospatial Data from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
           </span>"),
     width = 5
   ),
