@@ -76,7 +76,7 @@ ui <- fluidPage(
           <span style='color:black;font-size:12px'
           <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
           <p></p>
-          <p>Finnish Geospatial Data from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
+          <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
           </span>"),
     width = 5
   ),
