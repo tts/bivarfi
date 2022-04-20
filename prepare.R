@@ -4,7 +4,9 @@ library(pxweb)
 library(tidyverse)
 library(sf)
 
-# Municipalities
+# https://ropengov.github.io/geofi/index.html
+# https://ropengov.github.io/geofi/articles/geofi_joining_attribute_data.html
+
 mun <- get_municipalities(year = 2020)
 
 pxweb_query_list <-
