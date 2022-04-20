@@ -14,7 +14,7 @@ pxweb_query_list <-
        "Tiedot"=c("*"),
        "Vuosi"=c("2019"))
 
-# Get information by region
+# Get statistics by region (=municipality)
 px_raw <-
   pxweb_get(url = "https://pxnet2.stat.fi/PXWeb/api/v1/en/Kuntien_avainluvut/2020/kuntien_avainluvut_2020_aikasarja.px",
             query = pxweb_query_list)
@@ -26,7 +26,6 @@ px_data <- as_tibble(
 ) %>% setNames(make_clean_names(names(.))) %>% 
   pivot_longer(names_to = "information", values_to = "municipal_key_figures", 3:ncol(.))
 
-# Join municipality data and information by region
 map_data <- right_join(mun, 
                        px_data, 
                        by = c("municipality_name_fi" = "region_2020"))
@@ -34,15 +33,14 @@ map_data <- right_join(mun,
 map_data <- map_data %>% 
   filter(!is.na(municipal_key_figures))
 
-# Get population by municipality
+# Get population, and summarise by county
 pop <- get_municipality_pop(year = 2020) %>%  
-  dplyr::group_by(hyvinvointialue_name_fi) %>% 
+  dplyr::group_by(hyvinvointialue_name_fi) %>%
   summarise(vaesto = sum(vaesto),
             miehet = sum(miehet)) %>% 
   mutate(share_of_men = miehet/vaesto*100,
          share_of_women = 100 - share_of_men)
 
-# Join pop with map_data
 # Drop geometry so that join is possible
 map_data <- st_drop_geometry(map_data)
 map_data_pop <- inner_join(pop, map_data)
