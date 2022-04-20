@@ -56,7 +56,7 @@ make_legend <- function(x, y, dim = 3, pal = mypal) {
 ui <- fluidPage(
   
   tags$h2(
-    HTML("Compare means by region")
+    HTML("Compare means by county")
   ),
   
   tags$head(
@@ -91,8 +91,10 @@ ui <- fluidPage(
           <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
           <p></p>
           <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
+          <p></p>
+          <p><a hre='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
           </span>"),
-    width = 5
+    width = 7
   ),
   
   mainPanel(
@@ -101,7 +103,7 @@ ui <- fluidPage(
                plotOutput("l"),
                plotOutput("map"))
     ),
-    width = 7
+    width = 5
   )
 )
 
