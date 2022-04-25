@@ -1,7 +1,8 @@
 library(geofi)
 library(janitor)
 library(pxweb)
-library(tidyverse)
+library(tidyr)
+library(dplyr)
 library(sf)
 
 # https://ropengov.github.io/geofi/index.html
@@ -26,26 +27,54 @@ px_data <- as_tibble(
 ) %>% setNames(make_clean_names(names(.))) %>% 
   pivot_longer(names_to = "information", values_to = "municipal_key_figures", 3:ncol(.))
 
+# Note that join with municipality_name_fi leaves out (at least some of) those with Swedish as the majority language
 map_data <- right_join(mun, 
                        px_data, 
-                       by = c("municipality_name_fi" = "region_2020"))
-# Filter not-NA's
-map_data <- map_data %>% 
+                       by = c("municipality_name_en" = "region_2020"))
+
+# Municipality
+
+map_data_m <- map_data %>% 
+  select(nimi, information, municipal_key_figures)
+
+pop_m <- get_municipality_pop(year = 2020) %>% 
+  dplyr::group_by(nimi) %>% 
+  mutate(share_of_men = miehet/vaesto*100,
+         share_of_women = 100 - share_of_men) 
+
+# Drop geometry so that join is possible
+map_data_m <- st_drop_geometry(map_data_m)
+map_pop_m <- inner_join(pop_m, map_data_m)
+
+pop_info <- map_pop_m %>% 
+  select(nimi, starts_with("share"), municipal_key_figures, information) 
+
+pop_info <- pop_info %>% 
   filter(!is.na(municipal_key_figures))
 
-# Get population, and summarise by county
-pop <- get_municipality_pop(year = 2020) %>%  
+saveRDS(pop_info, "data_m.RDS")
+
+# County
+
+map_data_c <- map_data %>% 
+  select(hyvinvointialue_name_fi, information, municipal_key_figures)
+
+pop_c <- get_municipality_pop(year = 2020) %>%  
   dplyr::group_by(hyvinvointialue_name_fi) %>%
   summarise(vaesto = sum(vaesto),
-            miehet = sum(miehet)) %>% 
+           miehet = sum(miehet)) %>%
   mutate(share_of_men = miehet/vaesto*100,
          share_of_women = 100 - share_of_men)
 
 # Drop geometry so that join is possible
-map_data <- st_drop_geometry(map_data)
-map_data_pop <- inner_join(pop, map_data)
+map_data_c <- st_drop_geometry(map_data_c)
+map_pop_c <- inner_join(pop_c, map_data_c)
 
-pop_info <- map_data_pop %>% 
+pop_info <- map_pop_c %>% 
   select(hyvinvointialue_name_fi, starts_with("share"), information, municipal_key_figures) 
 
-saveRDS(pop_info, "map_data.RDS")
+pop_info <- pop_info %>% 
+  filter(!is.na(municipal_key_figures))
+
+saveRDS(pop_info, "data_c.RDS")
+
