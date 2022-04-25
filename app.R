@@ -1,54 +1,52 @@
 library(shiny)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 library(biscale)
+library(ggiraph)
 
 # Inspiration:
 # https://twitter.com/jhilden/status/1513882835937026073
 # https://slu-opengis.github.io/biscale/articles/biscale.html
 
-map_data <- readRDS("map_data.RDS")
+# Municipalities
+data_m <- readRDS("data_m.RDS") 
+# Counties
+data_c <- readRDS("data_c.RDS") 
 
-variables1 <- sort(c("share_of_women", "share_of_men", unique(map_data$information)))
-variables2 <- sort(unique(map_data$information))
+variables1 <- sort(c("share_of_women", "share_of_men", unique(data_m$information)))
+variables2 <- sort(unique(data_m$information))
 
-# Classic viridis from https://github.com/slu-openGIS/biscale/blob/master/R/bi_pal.R
-mypal <- bi_pal_manual(val_3_3 = "#218f8c", # high x, high y
-                       val_2_3 = "#72cf8e",
-                       val_1_3 = "#fef286", # low x, high y
-                       val_3_2 = "#6381a6",
-                       val_2_2 = "#86c2c0", # medium x, medium y
-                       val_1_2 = "#def1c1",
-                       val_3_1 = "#9874a0", # high x, low y
-                       val_2_1 = "#c1bdd6",
-                       val_1_1 = "#e8f4f3")
-
-make_bivariate_map <- function(data, x, y, style = "quantile", dim = 3, pal = mypal) {
+make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal = "Viridis") {
   
   x <- as.name(x)
   y <- as.name(y)
   
-  map_data <- bi_class(data, x = !!x, y = !!y, style = style, dim = dim)
+  map_dataset <- bi_class(dataset, x = !!x, y = !!y, style = style, dim = dim)
   
-  map <- ggplot(map_data) +
-    geom_sf(mapping = aes(fill = bi_class), color = "white", size = 0.1) +
+  map <- ggplot(map_dataset) +
+    geom_sf_interactive(mapping = aes(fill = bi_class, tooltip = nimi, data_id = nimi), color = "white", size = 0.1) +
     bi_scale_fill(pal = pal, dim = dim) +
     bi_theme() +
     theme(legend.position="none")
-
-  return(map)
+  
+  x <- girafe(ggobj = map, 
+              options = list(opts_selection(type = "single"))) 
+  
+  return(x)
   
 }
 
-make_legend <- function(x, y, dim = 3, pal = mypal) {
+make_legend <- function(x, y, dim = 3, pal = "Viridis") {
   
   x <- as.name(x)
   y <- as.name(y)
   
   l <- bi_legend(pal = pal,
-                      dim = dim,
-                      xlab = paste0("Higher ", x),
-                      ylab = paste0("Higher ", y),
-                      size = 8)
+                 dim = dim,
+                 xlab = paste0("Higher ", x),
+                 ylab = paste0("Higher ", y),
+                 size = 9)
   return(l)
   
 }
@@ -56,7 +54,7 @@ make_legend <- function(x, y, dim = 3, pal = mypal) {
 ui <- fluidPage(
   
   tags$h2(
-    HTML("Compare means by county")
+    HTML("Compare statistics by county or municipality")
   ),
   
   tags$head(
@@ -70,14 +68,15 @@ ui <- fluidPage(
       }
       label.control-label {
         color: #5f9ea0;
-      }
-      .leaflet-container {
-       cursor: pointer !important;
       }"
     ))
   ),
   
   sidebarPanel(
+    selectInput(inputId = "dataset",
+                label = "Dataset",
+                choices = c("Municipality", "County"),
+                selected = "Municipality"),
     selectInput(inputId = "varx",
                 label = "Variable x",
                 choices = variables1,
@@ -92,46 +91,58 @@ ui <- fluidPage(
           <p></p>
           <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
           <p></p>
-          <p><a hre='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
+          <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
           </span>"),
-    width = 7
+    width = 8
   ),
   
   mainPanel(
-    tabsetPanel(
-      tabPanel("Map", 
-               plotOutput("l"),
-               plotOutput("map"))
-    ),
-    width = 5
-  )
+    fluidRow(
+      column(width = 6, plotOutput("l", height = "400px")),
+      column(width = 6, girafeOutput("map", height = "400px"))
+  ))
+    
 )
 
 server <- function(input, output, session) {
   
+  data_selected <- reactive({
+    
+    if(input$dataset == "Municipality") {
+      data_to_plot <- data_m
+    } else {
+      data_to_plot <- data_c
+    }
+    
+  })
+  
   data_to_plot <- reactive({
     
     if(input$varx %in% c("share_of_men", "share_of_women")) {
-      f <- map_data %>% 
+      f <- data_selected() %>% 
         filter(grepl(input$vary, information)) 
-    } else {
-      f <- map_data %>% 
-        filter(grepl(input$varx, information) | grepl(input$vary, information))
-    } 
+      
+      } else {
+        f <- data_selected() %>% 
+          filter(grepl(input$varx, information) | grepl(input$vary, information))
+      } 
     
-    f %>% 
-      group_by(hyvinvointialue_name_fi, information) %>% 
+    f2 <- f %>% 
+      group_by(across(1), information) %>% 
       mutate(mean_val = mean(municipal_key_figures)) %>% 
       select(-municipal_key_figures) %>% 
       ungroup() %>% 
-      filter(!duplicated(cbind(hyvinvointialue_name_fi, information))) %>% 
-      spread(information, mean_val)
+      {if (names(.)[1] =="hyvinvointialue_name_fi") 
+        filter(., !duplicated(cbind(hyvinvointialue_name_fi, information))) else .} %>% 
+      spread(information, mean_val) %>% 
+      rename(nimi = names(.)[1])
+  
   })
   
-  output$map <- renderPlot({
+  output$map <- renderGirafe({
     
-    make_bivariate_map(data_to_plot(), input$varx, input$vary)
-   
+   make_bivariate_map(data_to_plot(), input$varx, input$vary)
+    
   })
   
   output$l <- renderPlot({
