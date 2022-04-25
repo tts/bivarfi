@@ -24,19 +24,19 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
   
   map_dataset <- bi_class(dataset, x = !!x, y = !!y, style = style, dim = dim)
   
-  tooltip_css <- "background-color:gray;color:white;font-style:italic;padding:10px;border-radius:5px;"
-  
   map <- ggplot(map_dataset) +
     geom_sf_interactive(mapping = aes(fill = bi_class, tooltip = nimi, data_id = nimi), color = "white", size = 0.1) +
     bi_scale_fill(pal = pal, dim = dim) +
     bi_theme() +
     theme(legend.position="none")
   
+  tooltip_css <- "background-color:gray;color:white;font-style:italic;padding:10px;border-radius:5px;"
+  
   x <- girafe(ggobj = map, 
               options = list(opts_selection(type = "single"),
                              opts_tooltip(css = tooltip_css),
                              opts_hover_inv(css = "opacity:0.4;"),
-                             opts_hover(css = "fill:red;"),
+                             opts_hover(css = "fill:maroon;"),
                              opts_sizing(width = .7),
                              opts_toolbar(saveaspng = FALSE)))
   
