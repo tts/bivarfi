@@ -141,13 +141,13 @@ server <- function(input, output, session) {
   
   output$map <- renderGirafe({
     
-   make_bivariate_map(data_to_plot(), input$varx, input$vary)
+   make_bivariate_map(data_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
     
   })
   
   output$l <- renderPlot({
     
-    make_legend(input$varx, input$vary)
+    make_legend(input$varx, input$vary, dim = 3, pal = "Viridis")
     
   })
   
