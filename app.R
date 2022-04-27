@@ -1,4 +1,5 @@
 library(shiny)
+library(shinythemes)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -32,13 +33,14 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
   
   tooltip_css <- "background-color:gray;color:white;font-style:italic;padding:10px;border-radius:5px;"
   
+  # https://stackoverflow.com/a/65267885
   x <- girafe(ggobj = map, 
-              options = list(opts_selection(type = "single"),
-                             opts_tooltip(css = tooltip_css),
-                             opts_hover_inv(css = "opacity:0.4;"),
-                             opts_hover(css = "fill:maroon;"),
-                             opts_sizing(width = .7),
-                             opts_toolbar(saveaspng = FALSE)))
+              options = list(opts_tooltip(css = tooltip_css),
+                             opts_hover(css = "fill:red;", reactive = FALSE),
+                             opts_selection(type = "single", css = "fill:red;"),
+                             opts_sizing(rescale = TRUE, width = 1),
+                             opts_toolbar(saveaspng = FALSE)
+              ))
   
   return(x)
   
@@ -50,68 +52,75 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
   y <- as.name(y)
   
   l <- bi_legend(pal = pal,
-                 dim = dim,
-                 xlab = paste0("Higher ", x),
-                 ylab = paste0("Higher ", y),
-                 size = 9)
+                dim = dim,
+                xlab = paste0("Higher ", x),
+                ylab = paste0("Higher ", y),
+                size = 15)
+  
   return(l)
   
 }
 
 ui <- fluidPage(
   
+  theme = shinytheme("superhero"),
+  
   tags$h2(
-    HTML("Compare statistics by county or municipality")
+    HTML("Compare statistical means by county or municipality")
   ),
   
-  tags$head(
-    tags$style(HTML("
-      body {
-        background-color: #333333;
-        color: white;
-      },
-      .shiny-input-container {
-        color: snow;
-      }
-      label.control-label {
-        color: #5f9ea0;
-      }"
-    ))
+  
+  fluidRow(
+    column(width = 6, 
+           plotOutput("l", height = "400px", width = "100%")),
+    column(width = 6, 
+           girafeOutput("map", height = "400px", width = "100%"))
   ),
   
-  sidebarPanel(
-    selectInput(inputId = "dataset",
-                label = "Dataset",
-                choices = c("Municipality", "County"),
-                selected = "Municipality"),
-    selectInput(inputId = "varx",
-                label = "Variable x",
-                choices = variables1,
-                selected = "share_of_men"),
-    selectInput(inputId = "vary",
-                label = "Variable y",
-                choices = variables2,
-                selected = "degree_of_urbanisation_percent"),
-    HTML("<p></p>
-          <span style='color:black;font-size:12px'
+  
+  br(),
+  
+  fluidRow(
+    column(width = 2, 
+           radioButtons(inputId = "dataset",
+                        label = "Dataset",
+                        choices = c("Municipality", "County"),
+                        selected = "Municipality",
+                        width = "100%",
+                        inline = TRUE)),
+    column(width = 7,
+           selectInput(inputId = "varx",
+                       label = "Variable x",
+                       choices = variables1,
+                       selected = "share_of_men",
+                       width = "100%"),
+           selectInput(inputId = "vary",
+                       label = "Variable y",
+                       choices = variables2,
+                       selected = "degree_of_urbanisation_percent",
+                       width = "100%")),
+    column(width = 3, 
+           HTML("
           <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
           <p></p>
           <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
           <p></p>
-          <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
-          </span>"),
-    width = 8
-  ),
+          <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>"))
+           
+  )
   
-  mainPanel(
-    fluidRow(
-      column(width = 6, plotOutput("l", height = "400px")),
-      column(width = 6, girafeOutput("map", height = "400px"))
-  ))
-    
 )
 
 server <- function(input, output, session) {
+  
+  # https://carlo-knotz.medium.com/making-data-dashboard-plots-talk-to-each-other-with-ggiraph-and-shiny-460faa7b22e0
+  # Future idea: highlight those polygons in the map whose color is the same as the color of the selected legend plot
+  #
+  # observe({
+  #   print(input$l_selected)
+  # })
+  #
+  # source("my_bi_legend.R")
   
   data_selected <- reactive({
     
@@ -129,10 +138,10 @@ server <- function(input, output, session) {
       f <- data_selected() %>% 
         filter(grepl(input$vary, information)) 
       
-      } else {
-        f <- data_selected() %>% 
-          filter(grepl(input$varx, information) | grepl(input$vary, information))
-      } 
+    } else {
+      f <- data_selected() %>% 
+        filter(grepl(input$varx, information) | grepl(input$vary, information))
+    } 
     
     f2 <- f %>% 
       group_by(across(1), information) %>% 
@@ -143,12 +152,6 @@ server <- function(input, output, session) {
         filter(., !duplicated(cbind(hyvinvointialue_name_fi, information))) else .} %>% 
       spread(information, mean_val) %>% 
       rename(nimi = names(.)[1])
-  
-  })
-  
-  output$map <- renderGirafe({
-    
-    make_bivariate_map(data_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
     
   })
   
@@ -157,6 +160,15 @@ server <- function(input, output, session) {
     make_legend(input$varx, input$vary, dim = 3, pal = "Viridis")
     
   })
+  #, width = "100%", height = "400px"
+  
+  output$map <- renderGirafe({
+    
+    make_bivariate_map(data_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
+    
+  })
+  
+  
   
 }
 
