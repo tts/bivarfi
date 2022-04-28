@@ -12,6 +12,7 @@ library(ggiraph)
 
 # Municipalities
 data_m <- readRDS("data_m.RDS") 
+
 # Counties
 data_c <- readRDS("data_c.RDS") 
 
@@ -33,7 +34,6 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
   
   tooltip_css <- "background-color:gray;color:white;font-style:italic;padding:10px;border-radius:5px;"
   
-  # https://stackoverflow.com/a/65267885
   x <- girafe(ggobj = map, 
               options = list(opts_tooltip(css = tooltip_css),
                              opts_hover(css = "fill:red;", reactive = FALSE),
@@ -101,11 +101,11 @@ ui <- fluidPage(
                        width = "100%")),
     column(width = 3, 
            HTML("
-          <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>
-          <p></p>
-          <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
-          <p></p>
-          <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>"))
+            <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
+            <p></p>
+            <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
+            <p></p>
+            <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>"))
            
   )
   
@@ -145,30 +145,26 @@ server <- function(input, output, session) {
     
     f2 <- f %>% 
       group_by(across(1), information) %>% 
-      mutate(mean_val = mean(municipal_key_figures)) %>% 
-      select(-municipal_key_figures) %>% 
-      ungroup() %>% 
-      {if (names(.)[1] =="hyvinvointialue_name_fi") 
-        filter(., !duplicated(cbind(hyvinvointialue_name_fi, information))) else .} %>% 
-      spread(information, mean_val) %>% 
+      mutate(mean_val = mean(municipal_key_figures)) %>%
+      select(-municipal_key_figures) %>%
+      ungroup() %>%
+      {if (input$dataset == "County")
+        filter(., !duplicated(cbind(hyvinvointialue_name_fi, information))) else .} %>%
+      spread(information, mean_val) %>%
       rename(nimi = names(.)[1])
     
   })
   
   output$l <- renderPlot({
-    
     make_legend(input$varx, input$vary, dim = 3, pal = "Viridis")
-    
-  })
-  #, width = "100%", height = "400px"
+  }) %>% 
+    bindCache(input$varx, input$vary)
   
+
   output$map <- renderGirafe({
-    
     make_bivariate_map(data_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
-    
-  })
-  
-  
+  }) %>% 
+    bindCache(data_to_plot(), input$varx, input$vary)
   
 }
 
