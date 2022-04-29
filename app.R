@@ -1,7 +1,6 @@
 library(shiny)
 library(shinythemes)
 library(dplyr)
-library(tidyr)
 library(ggplot2)
 library(biscale)
 library(ggiraph)
@@ -13,11 +12,11 @@ library(ggiraph)
 # Municipalities
 data_m <- readRDS("data_m.RDS") 
 
-# Counties
-data_c <- readRDS("data_c.RDS") 
+# Provinces
+data_p <- readRDS("data_p.RDS") 
 
-variables1 <- sort(c("share_of_women", "share_of_men", unique(data_m$information)))
-variables2 <- sort(unique(data_m$information))
+variables1 <- sort(c("share_of_women", "share_of_men", names(data_m)[5:25]))
+variables2 <- variables1
 
 make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal = "Viridis") {
   
@@ -63,31 +62,26 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
 
 ui <- fluidPage(
   
-  theme = shinytheme("superhero"),
+  theme = shinytheme("slate"),
   
   tags$h2(
-    HTML("Compare statistical means by county or municipality")
+    HTML("Compare municipality key figures by municipality, and by province means")
   ),
   
   
   fluidRow(
-    column(width = 6, 
+    column(width = 4, 
            plotOutput("l", height = "400px", width = "100%")),
-    column(width = 6, 
-           girafeOutput("map", height = "400px", width = "100%"))
+    column(width = 4, 
+           girafeOutput("map_m", height = "400px", width = "100%")),
+    column(width = 4,
+           girafeOutput("map_p", height = "400px", width = "100%"))
   ),
   
   
   br(),
   
   fluidRow(
-    column(width = 2, 
-           radioButtons(inputId = "dataset",
-                        label = "Dataset",
-                        choices = c("Municipality", "County"),
-                        selected = "Municipality",
-                        width = "100%",
-                        inline = TRUE)),
     column(width = 7,
            selectInput(inputId = "varx",
                        label = "Variable x",
@@ -99,7 +93,7 @@ ui <- fluidPage(
                        choices = variables2,
                        selected = "degree_of_urbanisation_percent",
                        width = "100%")),
-    column(width = 3, 
+    column(width = 5, 
            HTML("
             <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
             <p></p>
@@ -122,37 +116,14 @@ server <- function(input, output, session) {
   #
   # source("my_bi_legend.R")
   
-  data_selected <- reactive({
-    
-    if(input$dataset == "Municipality") {
-      data_to_plot <- data_m
-    } else {
-      data_to_plot <- data_c
-    }
-    
+  m_to_plot <- reactive({
+    data_m %>% 
+      select(1, input$varx, input$vary)
   })
   
-  data_to_plot <- reactive({
-    
-    if(input$varx %in% c("share_of_men", "share_of_women")) {
-      f <- data_selected() %>% 
-        filter(grepl(input$vary, information)) 
-      
-    } else {
-      f <- data_selected() %>% 
-        filter(grepl(input$varx, information) | grepl(input$vary, information))
-    } 
-    
-    f2 <- f %>% 
-      group_by(across(1), information) %>% 
-      mutate(mean_val = mean(municipal_key_figures)) %>%
-      select(-municipal_key_figures) %>%
-      ungroup() %>%
-      {if (input$dataset == "County")
-        filter(., !duplicated(cbind(hyvinvointialue_name_fi, information))) else .} %>%
-      spread(information, mean_val) %>%
-      rename(nimi = names(.)[1])
-    
+  p_to_plot <- reactive({
+    data_p %>% 
+      select(1, input$varx, input$vary)
   })
   
   output$l <- renderPlot({
@@ -160,11 +131,15 @@ server <- function(input, output, session) {
   }) %>% 
     bindCache(input$varx, input$vary)
   
-
-  output$map <- renderGirafe({
-    make_bivariate_map(data_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
+  output$map_m <- renderGirafe({
+    make_bivariate_map(m_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
   }) %>% 
-    bindCache(data_to_plot(), input$varx, input$vary)
+    bindCache(m_to_plot(), input$varx, input$vary)
+  
+  output$map_p <- renderGirafe({
+    make_bivariate_map(p_to_plot(), input$varx, input$vary, style = "quantile", dim = 3, pal = "Viridis")
+  }) %>% 
+    bindCache(p_to_plot(), input$varx, input$vary)
   
 }
 
