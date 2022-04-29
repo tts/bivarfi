@@ -62,7 +62,7 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
 
 ui <- fluidPage(
   
-  theme = shinytheme("slate"),
+  theme = shinytheme("cyborg"),
   
   tags$h2(
     HTML("Compare municipality key figures by municipality, and by province means")
@@ -71,7 +71,7 @@ ui <- fluidPage(
   
   fluidRow(
     column(width = 4, 
-           plotOutput("l", height = "400px", width = "100%")),
+           plotOutput("l", height = "403px", width = "100%")),
     column(width = 4, 
            girafeOutput("map_m", height = "400px", width = "100%")),
     column(width = 4,
