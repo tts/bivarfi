@@ -31,12 +31,12 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
     bi_theme() +
     theme(legend.position="none")
   
-  tooltip_css <- "background-color:gray;color:white;font-style:italic;padding:10px;border-radius:5px;"
+  tooltip_css <- "background-color: transparent;font-family: Helvetica,Arial,sans-serif;color: #dcdcdc;text-shadow: 1px 1px 2px black;stroke: #555555;stroke-width: 2;padding: 5px"
   
   x <- girafe(ggobj = map, 
-              options = list(opts_tooltip(css = tooltip_css),
-                             opts_hover(css = "fill:red;", reactive = FALSE),
-                             opts_selection(type = "single", css = "fill:red;"),
+              options = list(opts_tooltip(use_fill = TRUE, opacity = 1, css = tooltip_css),
+                             opts_hover(css = tooltip_css, reactive = FALSE),
+                             opts_selection(type = "single", css = tooltip_css),
                              opts_sizing(rescale = TRUE, width = 1),
                              opts_toolbar(saveaspng = FALSE)
               ))
@@ -71,9 +71,9 @@ ui <- fluidPage(
   
   fluidRow(
     column(width = 4, 
-           plotOutput("l", height = "403px", width = "100%")),
-    column(width = 4, 
            girafeOutput("map_m", height = "400px", width = "100%")),
+    column(width = 4, 
+           plotOutput("l", height = "400px", width = "100%")),
     column(width = 4,
            girafeOutput("map_p", height = "400px", width = "100%"))
   ),
@@ -108,7 +108,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   # https://carlo-knotz.medium.com/making-data-dashboard-plots-talk-to-each-other-with-ggiraph-and-shiny-460faa7b22e0
-  # Future idea: highlight those polygons in the map whose color is the same as the color of the selected legend plot
+  # Future idea: highlight those polygons in the map whose color is the same as the color of the selected legend tile
   #
   # observe({
   #   print(input$l_selected)
