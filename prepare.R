@@ -48,7 +48,7 @@ pop_info <- map_pop_m %>%
   select(nimi, starts_with("share"), municipal_key_figures, information) 
 
 pop_info <- pop_info %>% 
-  filter(!is.na(municipal_key_figures)) %>% # Newest work-related are from 2018
+  filter(!is.na(municipal_key_figures)) %>% # Newest work-related ones are from 2018
   group_by(nimi, information) %>%
   mutate(mean_val = mean(municipal_key_figures)) %>%
   select(-municipal_key_figures) %>%
