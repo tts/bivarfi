@@ -4,6 +4,7 @@ library(dplyr)
 library(ggplot2)
 library(biscale)
 library(ggiraph)
+library(shinycssloaders)
 
 # Inspiration:
 # https://twitter.com/jhilden/status/1513882835937026073
@@ -17,6 +18,8 @@ data_p <- readRDS("data_p.RDS")
 
 variables1 <- sort(c("share_of_women", "share_of_men", names(data_m)[5:25]))
 variables2 <- variables1
+
+options(spinner.type = 7)
 
 make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal = "Viridis") {
   
@@ -71,11 +74,17 @@ ui <- fluidPage(
   
   fluidRow(
     column(width = 4, 
-           girafeOutput("map_m", height = "400px", width = "100%")),
+           shinycssloaders::withSpinner(
+             girafeOutput("map_m", height = "400px", width = "100%"), hide.ui = FALSE
+             )),
     column(width = 4, 
-           plotOutput("l", height = "400px", width = "100%")),
+           shinycssloaders::withSpinner(
+             plotOutput("l", height = "400px", width = "100%"), hide.ui = FALSE
+           )),
     column(width = 4,
-           girafeOutput("map_p", height = "400px", width = "100%"))
+           shinycssloaders::withSpinner(
+             girafeOutput("map_p", height = "400px", width = "100%"), hide.ui = FALSE
+           ))
   ),
   
   
