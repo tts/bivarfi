@@ -59,7 +59,7 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
 
 # Server
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   m_to_plot <- reactive({
     data_m %>% 
@@ -86,6 +86,14 @@ server <- function(input, output) {
   }) %>% 
     bindCache(p_to_plot(), input$varx, input$vary)
   
+  # Automatically bookmark every time an input changes
+  observe({
+    reactiveValuesToList(input)
+    session$doBookmark()
+  })
+  
+  onBookmarked(updateQueryString)
+  
 }
 
 # UI
@@ -97,7 +105,6 @@ header <- dashboardHeader(
 body <- dashboardBody(
   fluidRow(
     column(width = 4,
-           # style = "background-color:#4d3a7d;",
            box(title = "Municipalities", 
                footer = "Data by Statistics Finland",
                width = NULL,
@@ -111,7 +118,7 @@ body <- dashboardBody(
                width = NULL,
                shinycssloaders::withSpinner(
                  girafeOutput("map_p", height = "100%"), hide.ui = FALSE
-               )),
+               ))
     ),
     column(width = 4,
            box(width = NULL, status = "warning",
@@ -140,12 +147,13 @@ body <- dashboardBody(
   )
 )
 
-ui <- dashboardPage(
-  header,
-  dashboardSidebar(disable = TRUE),
-  body
-)
+ui <- function(request) { 
+  dashboardPage(
+    header,
+    dashboardSidebar(disable = TRUE),
+    body
+  ) }
 
 
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server, enableBookmarking = "url")
