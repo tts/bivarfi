@@ -31,7 +31,7 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
     geom_sf_interactive(mapping = aes(fill = bi_class, tooltip = nimi, data_id = nimi)) +
     bi_scale_fill(pal = pal, dim = dim) +
     bi_theme() +
-    theme(legend.position="none")
+    theme(legend.position = "none")
   
   tooltip_css <- "
     background-color: transparent;
@@ -192,8 +192,8 @@ ui <- function(request) {
     dashboardSidebar(
       sidebarMenu(id = "sidebar",
                   menuItem("Dashboard", tabName = "dashboard"),
-                  menuItem("Municipal data", tabName = "alldata_m", badgeColor = "green"),
-                  menuItem("Province data", tabName = "alldata_p", badgeColor = "green"))),
+                  menuItem("Municipal data", tabName = "alldata_m"),
+                  menuItem("Province data", tabName = "alldata_p"))),
     body
   ) }
 
