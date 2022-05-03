@@ -2,6 +2,7 @@ library(dplyr)
 library(biscale)
 library(ggplot2)
 library(ggiraph)
+library(shiny)
 library(shinydashboard)
 library(shinycssloaders)
 
@@ -14,10 +15,12 @@ data_p <- readRDS("data_p.RDS")
 variables1 <- sort(c("share_of_women", "share_of_men", names(data_m)[5:25]))
 variables2 <- variables1
 
-options(spinner.type = 7,
-        spinner.size = 0.5,
+# shinycssloaders spinner
+options(spinner.type  = 7,
+        spinner.size  = 0.5,
         spinner.color = "#ff6502")
 
+# Bivariate chrolopeth map
 make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal = "Viridis") {
   x <- as.name(x)
   y <- as.name(y)
@@ -30,11 +33,20 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
     bi_theme() +
     theme(legend.position="none")
   
-  tooltip_css <- "background-color: transparent;font-family: Helvetica,Arial,sans-serif;color: black;text-shadow: 1px 1px 1px white;stroke: #555555;stroke-width: 2;padding: 5px"
-  
+  tooltip_css <- "
+    background-color: transparent;
+    font-family: Helvetica,Arial,sans-serif;
+    color: black;
+    text-shadow: 1px 1px 1px white;
+    stroke: #555555;
+    padding: 5px
+  "
+
   x <- girafe(ggobj = map, 
+              height_svg = 8,
               options = list(opts_tooltip(use_fill = TRUE, opacity = 1, css = tooltip_css),
                              opts_hover(css = tooltip_css, reactive = FALSE),
+                             opts_hover_inv(css = "opacity:0.1;"),
                              opts_selection(type = "single", css = tooltip_css),
                              opts_sizing(rescale = TRUE, width = 1),
                              opts_toolbar(saveaspng = FALSE)
@@ -43,12 +55,13 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
   return(x)
 }
 
+# Bivariate chrolopeth map legend
 make_legend <- function(x, y, dim = 3, pal = "Viridis") {
   x <- as.name(x)
   y <- as.name(y)
   
-  l <- bi_legend(pal = pal,
-                 dim = dim,
+  l <- bi_legend(pal  = pal,
+                 dim  = dim,
                  xlab = paste0("Higher ", x),
                  ylab = paste0("Higher ", y),
                  size = 10)
@@ -57,8 +70,7 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
 }
 
 
-# Server
-
+# Shiny server
 server <- function(input, output, session) {
   
   m_to_plot <- reactive({
@@ -86,6 +98,20 @@ server <- function(input, output, session) {
   }) %>% 
     bindCache(p_to_plot(), input$varx, input$vary)
   
+  output$map_m_data <- DT::renderDataTable({
+    DT::datatable(data_m, options = list(
+      columnDefs = list(
+        list(visible = FALSE, targets = c(4))), scrollX = TRUE)) %>% 
+      DT::formatRound(c(2:25), digits = 1)
+  })
+  
+  output$map_p_data <- DT::renderDataTable({
+    DT::datatable(data_p, options = list(
+      columnDefs = list(
+        list(visible = FALSE, targets = c(4))), scrollX = TRUE)) %>% 
+      DT::formatRound(c(2:25), digits = 1)
+  })
+
   # Automatically bookmark every time an input changes
   observe({
     reactiveValuesToList(input)
@@ -96,64 +122,81 @@ server <- function(input, output, session) {
   
 }
 
-# UI
-
+# Shiny UI
 header <- dashboardHeader(
   title = "Compare municipality key figures", titleWidth = "400px"
 )
 
 body <- dashboardBody(
-  fluidRow(
-    column(width = 4,
-           box(title = "Municipalities", 
-               footer = "Data by Statistics Finland",
-               width = NULL,
-               shinycssloaders::withSpinner(
-                 girafeOutput("map_m", height = "100%"), hide.ui = FALSE
-               )),
+  tabItems(
+    tabItem(tabName = "dashboard",
+      fluidRow(
+      column(width = 4,
+             box(title = "Municipalities", 
+                 footer = "2019 data by @StatsFinland | App by @ttso",
+                 width = NULL,
+                 shinycssloaders::withSpinner(
+                   girafeOutput("map_m", height = "100%"), hide.ui = FALSE
+                 ))
+      ),
+      column(width = 4,
+             box(title = "Provinces (means)",
+                 footer = "2019 data by @StatsFinland | App by @ttso",
+                 width = NULL,
+                 shinycssloaders::withSpinner(
+                   girafeOutput("map_p", height = "100%"), hide.ui = FALSE
+                 ))
+      ),
+      column(width = 4,
+             box(width = NULL, status = "warning",
+                 selectInput(inputId  = "varx",
+                             label    = "Variable x",
+                             choices  = variables1,
+                             selected = "share_of_men"
+                 ),
+                 selectInput(inputId  = "vary",
+                             label    = "Variable y",
+                             choices  = variables2,
+                             selected = "degree_of_urbanisation_percent"
+                 ),
+                 HTML("
+                  <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
+                  <p></p>
+                  <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
+                  <p></p>
+                  <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>")
+             ),
+             br(),
+             box(width = NULL, status = "warning",
+                 shinycssloaders::withSpinner(
+                   plotOutput("l", height = "400"), hide.ui = FALSE
+                 ))
+      ) )
+    ), 
+    tabItem(tabName = "alldata_m",
+            fluidRow(
+              column(width = 12,
+                     DT::DTOutput("map_m_data"))
+            )
     ),
-    column(width = 4,
-           box(title = "Provinces (means)",
-               footer = "Data by Statistics Finland",
-               width = NULL,
-               shinycssloaders::withSpinner(
-                 girafeOutput("map_p", height = "100%"), hide.ui = FALSE
-               ))
-    ),
-    column(width = 4,
-           box(width = NULL, status = "warning",
-               selectInput(inputId = "varx",
-                           label = "Variable x",
-                           choices = variables1,
-                           selected = "share_of_men"
-               ),
-               selectInput(inputId = "vary",
-                           label = "Variable y",
-                           choices = variables2,
-                           selected = "degree_of_urbanisation_percent"
-               ),
-               HTML("
-                <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
-                <p></p>
-                <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
-                <p></p>
-                <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>")
-           ),
-           box(width = NULL, status = "warning",
-               shinycssloaders::withSpinner(
-                 plotOutput("l", height = "400"), hide.ui = FALSE
-               ))
-    )
+    tabItem(tabName = "alldata_p",
+            fluidRow(
+              column(width = 12,
+                     DT::DTOutput("map_p_data"))
+            ))
   )
 )
 
 ui <- function(request) { 
   dashboardPage(
     header,
-    dashboardSidebar(disable = TRUE),
+    dashboardSidebar(
+      sidebarMenu(id = "sidebar",
+                  menuItem("Dashboard", tabName = "dashboard"),
+                  menuItem("Municipal data", tabName = "alldata_m", badgeColor = "green"),
+                  menuItem("Province data", tabName = "alldata_p", badgeColor = "green"))),
     body
   ) }
-
 
 
 shinyApp(ui = ui, server = server, enableBookmarking = "url")
