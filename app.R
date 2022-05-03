@@ -193,7 +193,8 @@ ui <- function(request) {
       sidebarMenu(id = "sidebar",
                   menuItem("Dashboard", tabName = "dashboard"),
                   menuItem("Municipal data", tabName = "alldata_m"),
-                  menuItem("Province data", tabName = "alldata_p"))),
+                  menuItem("Province data", tabName = "alldata_p")),
+      collapsed = TRUE),
     body
   ) }
 
