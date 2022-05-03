@@ -12,8 +12,7 @@ data_m <- readRDS("data_m.RDS")
 # Provinces
 data_p <- readRDS("data_p.RDS") 
 
-variables1 <- sort(c("share_of_women", "share_of_men", names(data_m)[5:25]))
-variables2 <- variables1
+variables_y <- variables_x <- sort(c("share_of_women", "share_of_men", names(data_m)[5:25]))
 
 # shinycssloaders spinner
 options(spinner.type  = 7,
@@ -46,7 +45,7 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
               height_svg = 8,
               options = list(opts_tooltip(use_fill = TRUE, opacity = 1, css = tooltip_css),
                              opts_hover(css = tooltip_css, reactive = FALSE),
-                             opts_hover_inv(css = "opacity:0.1;"),
+                             opts_hover_inv(css = "opacity:0.3;"),
                              opts_selection(type = "single", css = tooltip_css),
                              opts_sizing(rescale = TRUE, width = 1),
                              opts_toolbar(saveaspng = FALSE)
@@ -70,7 +69,7 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
 
 # Shiny server
 server <- function(input, output, session) {
-  
+
   m_to_plot <- reactive({
     data_m %>% 
       select(1, input$varx, input$vary)
@@ -120,82 +119,78 @@ server <- function(input, output, session) {
 }
 
 # Shiny UI
-header <- dashboardHeader(
-  title = "Compare municipality key figures", titleWidth = "400px"
-)
-
-# Note that sidebarMenu() must be called from inside the ui function for bookmarking to work
-
-body <- dashboardBody(
-  tabItems(
-    tabItem(tabName = "dashboard",
-      fluidRow(
-      column(width = 4,
-             box(title = "Municipalities", 
-                 footer = "2019 data by @StatsFinland | App by @ttso",
-                 width = NULL,
-                 shinycssloaders::withSpinner(
-                   girafeOutput("map_m", height = "100%"), hide.ui = FALSE
-                 ))
-      ),
-      column(width = 4,
-             box(title = "Provinces (means)",
-                 footer = "2019 data by @StatsFinland | App by @ttso",
-                 width = NULL,
-                 shinycssloaders::withSpinner(
-                   girafeOutput("map_p", height = "100%"), hide.ui = FALSE
-                 ))
-      ),
-      column(width = 4,
-             box(width = NULL, status = "warning",
-                 selectInput(inputId  = "varx",
-                             label    = "Variable x",
-                             choices  = variables1,
-                             selected = "share_of_men"
-                 ),
-                 selectInput(inputId  = "vary",
-                             label    = "Variable y",
-                             choices  = variables2,
-                             selected = "degree_of_urbanisation_percent"
-                 ),
-                 HTML("
-                  <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
-                  <p></p>
-                  <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
-                  <p></p>
-                  <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>")
-             ),
-             br(),
-             box(width = NULL, status = "warning",
-                 shinycssloaders::withSpinner(
-                   plotOutput("l", height = "400"), hide.ui = FALSE
-                 ))
-      ) )
-    ), 
-    tabItem(tabName = "alldata_m",
-            fluidRow(
-              column(width = 12,
-                     DT::DTOutput("map_m_data"))
-            )
-    ),
-    tabItem(tabName = "alldata_p",
-            fluidRow(
-              column(width = 12,
-                     DT::DTOutput("map_p_data"))
-            ))
-  )
-)
 
 ui <- function(request) { 
   dashboardPage(
-    header,
+    dashboardHeader(
+      title = "Compare municipality key figures", titleWidth = "400px"
+    ),
     dashboardSidebar(
       sidebarMenu(id = "sidebar",
                   menuItem("Dashboard", tabName = "dashboard"),
                   menuItem("Municipal data", tabName = "alldata_m"),
                   menuItem("Province data", tabName = "alldata_p")),
       collapsed = TRUE),
-    body
+    dashboardBody(
+      tabItems(
+        tabItem(tabName = "dashboard",
+                fluidRow(
+                  column(width = 4,
+                         box(title = "Municipalities", 
+                             footer = "2019 data by @StatsFinland | App by @ttso",
+                             width = NULL,
+                             shinycssloaders::withSpinner(
+                               girafeOutput("map_m", height = "100%"), hide.ui = FALSE
+                             ))
+                  ),
+                  column(width = 4,
+                         box(title = "Provinces (means)",
+                             footer = "2019 data by @StatsFinland | App by @ttso",
+                             width = NULL,
+                             shinycssloaders::withSpinner(
+                               girafeOutput("map_p", height = "100%"), hide.ui = FALSE
+                             ))
+                  ),
+                  column(width = 4,
+                         box(width = NULL, status = "warning",
+                             selectInput(inputId  = "varx",
+                                         label    = "Variable x",
+                                         choices  = variables_x,
+                                         selected = "share_of_men"
+                             ),
+                             selectInput(inputId  = "vary",
+                                         label    = "Variable y",
+                                         choices  = variables_y,
+                                         selected = "degree_of_urbanisation_percent"
+                             ),
+                             #actionButton("submit", "Submit"),
+                             br(),
+                             HTML("
+                  <p>Finnish Geospatial Data (2019) from Statistics Finland by <a href='https://ropengov.github.io/geofi/index.html'>geofi</a>.</p>
+                  <p></p>
+                  <p><a href='https://www.stat.fi/meta/kas/index_en.html'>Words and expressions used in statistics</a></p>
+                  <p></p>
+                  <p><a href='https://github.com/tts/bivarfi'>R code</a> by <a href='https://twitter.com/ttso'>@ttso</a>.</p>")
+                         ),
+                         br(),
+                         box(width = NULL, status = "warning",
+                             shinycssloaders::withSpinner(
+                               plotOutput("l", height = "400"), hide.ui = FALSE
+                             ))
+                  ) )
+        ), 
+        tabItem(tabName = "alldata_m",
+                fluidRow(
+                  column(width = 12,
+                         DT::DTOutput("map_m_data"))
+                )
+        ),
+        tabItem(tabName = "alldata_p",
+                fluidRow(
+                  column(width = 12,
+                         DT::DTOutput("map_p_data"))
+                ))
+      ))
   ) }
 
 
