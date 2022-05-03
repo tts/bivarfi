@@ -20,7 +20,7 @@ options(spinner.type  = 7,
         spinner.size  = 0.5,
         spinner.color = "#ff6502")
 
-# Bivariate chrolopeth map
+# Bivariate choropleth map
 make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal = "Viridis") {
   x <- as.name(x)
   y <- as.name(y)
@@ -51,11 +51,10 @@ make_bivariate_map <- function(dataset, x, y, style = "quantile", dim = 3, pal =
                              opts_sizing(rescale = TRUE, width = 1),
                              opts_toolbar(saveaspng = FALSE)
               ))
-  
   return(x)
 }
 
-# Bivariate chrolopeth map legend
+# Map legend
 make_legend <- function(x, y, dim = 3, pal = "Viridis") {
   x <- as.name(x)
   y <- as.name(y)
@@ -65,7 +64,6 @@ make_legend <- function(x, y, dim = 3, pal = "Viridis") {
                  xlab = paste0("Higher ", x),
                  ylab = paste0("Higher ", y),
                  size = 10)
-  
   return(l)
 }
 
@@ -112,7 +110,6 @@ server <- function(input, output, session) {
       DT::formatRound(c(2:25), digits = 1)
   })
 
-  # Automatically bookmark every time an input changes
   observe({
     reactiveValuesToList(input)
     session$doBookmark()
@@ -126,6 +123,8 @@ server <- function(input, output, session) {
 header <- dashboardHeader(
   title = "Compare municipality key figures", titleWidth = "400px"
 )
+
+# Note that sidebarMenu() must be called from inside the ui function for bookmarking to work
 
 body <- dashboardBody(
   tabItems(
